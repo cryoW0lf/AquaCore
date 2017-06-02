@@ -1,0 +1,11 @@
+{
+  "ban.deny": [
+    "§b§lAquaCore §f§lNetwork",
+    "§aDu wurdest für §9§l%REASON%§r§a gebannt.",
+    "",
+    "§aDer Ban ist %UNTIL%."
+  ],
+  "ban.time": "bis zum §9%DATE%§a gültig",
+  "ban.forever": "§9permanent§a",
+  "ban.format": "HH:mm:ss dd.MM.yy"
+}

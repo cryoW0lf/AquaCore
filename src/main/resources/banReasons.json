@@ -1,0 +1,60 @@
+{
+  "cheats": {
+    "aliase": [
+      "cheating",
+      "hacking",
+      "hacks",
+      "modifikationen"
+    ],
+    "displayName": "Unerlaubte Modificationen",
+    "durations": [
+      259200,
+      604800,
+      2678400
+    ],
+    "permanent": true
+  },
+  "spamming": {
+    "aliase": [
+      "spam",
+      "spamm",
+      "beleidigung"
+    ],
+    "displayName": "Unangebrachte Verhaltensweise",
+    "durations": [
+      10800,
+      21600,
+      21600,
+      21600,
+      43200
+    ],
+    "permanent": true
+  },
+  "bugusing": {
+    "aliase": [
+      "bug",
+      "bugging"
+    ],
+    "displayName": "Ausnutzen von Lücken",
+    "durations": [
+      86400,
+      604800,
+      2678400
+    ],
+    "permanent": true
+  },
+  "special": {
+    "aliase": [],
+    "displayName": "Besondere Umstände",
+    "durations": [
+      86400
+    ],
+    "permanent": false
+  },
+  "specialPermanent": {
+    "aliase": [],
+    "displayName": "Besondere Umstände",
+    "durations": [],
+    "permanent": true
+  }
+}

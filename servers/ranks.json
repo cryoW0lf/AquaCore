@@ -1,0 +1,108 @@
+{
+  "default": {
+    "priority": 1000,
+    "displayName": "Spieler",
+    "prefix": "§a",
+    "inherits": [],
+    "permissions": []
+  },
+  "premium": {
+    "priority": 950,
+    "displayName": "Premium",
+    "prefix": "§6",
+    "inherits": [
+      "default"
+    ],
+    "permissions": []
+  },
+  "youtuber": {
+    "priority": 900,
+    "displayName": "Youtuber",
+    "prefix": "§5Youtuber §7| ",
+    "inherits": [
+      "premium"
+    ],
+    "permissions": []
+  },
+  "testSupporter": {
+    "priority": 90,
+    "displayName": "TestSupporter",
+    "prefix": "§eTSup §7| ",
+    "inherits": [],
+    "permissions": []
+  },
+  "testBuilder": {
+    "priority": 80,
+    "displayName": "TestBuilder",
+    "prefix": "§2TBuilder §7| ",
+    "inherits": [],
+    "permissions": []
+  },
+  "testDeveloper": {
+    "priority": 70,
+    "displayName": "TestDeveloper",
+    "prefix": "§bTDev §7| ",
+    "inherits": [],
+    "permissions": []
+  },
+  "supporter": {
+    "priority": 60,
+    "displayName": "Supporter",
+    "prefix": "§eSupporter §7| ",
+    "inherits": [],
+    "permissions": []
+  },
+  "builder": {
+    "priority": 50,
+    "displayName": "Builder",
+    "prefix": "§2Builder §7| ",
+    "inherits": [],
+    "permissions": []
+  },
+  "moderator": {
+    "priority": 40,
+    "displayName": "Moderator",
+    "prefix": "§cMod §7| ",
+    "inherits": [],
+    "permissions": []
+  },
+  "developer": {
+    "priority": 30,
+    "displayName": "Developer",
+    "prefix": "§bDev §7| ",
+    "inherits": [],
+    "permissions": []
+  },
+  "builderLeitung": {
+    "priority": 10,
+    "displayName": "BuilderLeitung",
+    "prefix": "§aBuilder §7| ",
+    "inherits": [
+      "default"
+    ],
+    "permissions": []
+  },
+  "devLeitung": {
+    "priority": 10,
+    "displayName": "DevLeitung",
+    "prefix": "§3Dev §7| ",
+    "inherits": [],
+    "permissions": []
+  },
+  "modLeitung": {
+    "priority": 10,
+    "displayName": "HeadModerator",
+    "prefix": "§4Mod §7| ",
+    "inherits": [],
+    "permissions": []
+  },
+  "admin": {
+    "priority": 1,
+    "displayName": "Admin",
+    "prefix": "§9Admin §7| ",
+    "inherits": [],
+    "permissions": [
+      "multiverse.*"
+    ]
+  }
+}

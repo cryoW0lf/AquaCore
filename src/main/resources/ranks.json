@@ -1,0 +1,308 @@
+{
+  "default": {
+    "priority": 1000,
+    "displayName": "§aSpieler",
+    "prefix": "§a",
+    "inherits": [],
+    "permissions": [
+      "essentials\\.(ptime|time)",
+      "essentials\\.afk(\\.auto)?",
+      "essentials\\.help(op)?",
+      "essentials\\.ignore",
+      "essentials\\.info",
+      "essentials\\.list",
+      "essentials\\.mail",
+      "essentials\\.msg",
+      "essentials\\.recipe",
+      "essentials\\.rules",
+      "essentials\\.suicide",
+      "essentials\\.ping",
+      "essentials\\.spawn",
+      "essentials\\.tpa(ccept|here|deny)?",
+      "essentials\\.warp(\\.list)?",
+      "core\\.tps",
+      "core\\.ping"
+    ]
+  },
+  "premium": {
+    "priority": 950,
+    "displayName": "§6Premium",
+    "prefix": "§6",
+    "inherits": [
+      "default"
+    ],
+    "permissions": []
+  },
+  "youtuber": {
+    "priority": 900,
+    "displayName": "§5Youtuber",
+    "prefix": "§5Youtuber §7| ",
+    "inherits": [
+      "premium"
+    ],
+    "permissions": []
+  },
+  "testSupporter": {
+    "priority": 90,
+    "displayName": "§eTestSupporter",
+    "prefix": "§eTSup §7| ",
+    "inherits": [
+      "youtuber"
+    ],
+    "permissions": [
+      "essentials\\.feed(\\.(others|cooldown\\.bypass))?",
+      "essentials\\.fly(\\.(others|safelogin))?",
+      "essentials\\.gamemode(\\.others)?",
+      "essentials\\.give",
+      "essentials\\.item",
+      "essentials\\.god",
+      "essentials\\.hat",
+      "essentials\\.heal(\\.(others|cooldown\\.bypass))?",
+      "essentials\\.more",
+      "essentials\\.ptime.others",
+      "essentials\\.repair(\\.(all|armor|enchanted))?",
+      "essentials\\.skull(\\.(modify|others|spawn))?",
+      "essentials\\.speed(\\.others)?",
+      "essentials\\.workbench",
+      "essentials\\.depth",
+      "essentials\\.getpos(\\.others)?",
+      "essentials\\.itemdb",
+      "essentials\\.mail\\.send",
+      "essentials\\.me",
+      "essentials\\.msg\\.(color|format|magic)",
+      "essentials\\.near",
+      "essentials\\.realname",
+      "essentials\\.whois",
+      "essentials\\.enderchest",
+      "essentials\\.back(\\.ondeath)?",
+      "essentials\\.home(\\.bed)?",
+      "essentials\\.top",
+      "essentials\\.tp",
+      "essentials\\.chat\\.(color|format|magic)",
+      "essentials\\.joinfullserver",
+      "core\\.(mute|kick)",
+      "core\\.ping\\.others"
+    ]
+  },
+  "testBuilder": {
+    "priority": 80,
+    "displayName": "§2TestBuilder",
+    "prefix": "§2TBuilder §7| ",
+    "inherits": [
+      "testSupporter"
+    ],
+    "permissions": [
+      "essentials\\.bigtree",
+      "essentials\\.break(\\.bedrock)?",
+      "essentials\\.firework(\\.fire)?",
+      "essentials\\.oversizedstacks",
+      "essentials\\.tree",
+      "essentials\\.unlimited(\\.(item-all|others))?",
+      "essentials\\.powertool(toggle)?",
+      "essentials\\.spawner(\\.(\\w*|\\*))?",
+      "essentials\\.(del|set)home",
+      "essentials\\.warps\\.(\\w*|\\*)",
+      "essentials\\.world",
+      "essentials\\.build",
+      "worldedit\\.biome\\.info",
+      "worldedit\\.chunkinfo",
+      "worldedit\\.navigation\\.(\\w*|\\*)",
+      "worldedit\\.navigation\\.(\\w*|\\*)",
+      "worldedit\\.navigation\\.(jumpto|thru)\\.command",
+      "worldedit\\.navigation\\.up",
+      "multiverse\\.core\\.confirm"
+    ]
+  },
+  "testDeveloper": {
+    "priority": 70,
+    "displayName": "§bTestDeveloper",
+    "prefix": "§bTDev §7| ",
+    "inherits": [
+      "testBuilder"
+    ],
+    "permissions": []
+  },
+  "supporter": {
+    "priority": 60,
+    "displayName": "§eSupporter",
+    "prefix": "§eSupporter §7| ",
+    "inherits": [
+      "testDeveloper"
+    ],
+    "permissions": [
+      "essentials\\.time\\.set",
+      "essentials\\.msg\\.(url|multiple)",
+      "essentials\\.near\\.others",
+      "essentials\\.invsee",
+      "essentials\\.thunder",
+      "essentials\\.(spawn|tp)\\.others",
+      "essentials\\.tphere",
+      "essentials\\.warp\\.otherplayers",
+      "essentials\\.chat\\.url",
+      "essentials\\.kick",
+      "core\\.unmute"
+    ]
+  },
+  "builder": {
+    "priority": 50,
+    "displayName": "§2Builder",
+    "prefix": "§2Builder §7| ",
+    "inherits": [
+      "supporter"
+    ],
+    "permissions": [
+      "essentials\\.spawnmob(\\.(\\w*|\\*))?",
+      "essentials\\.weather",
+      "essentials\\.setspawn",
+      "worldedit\\.biome\\.(set|list)",
+      "worldedit\\.clipboard\\.(\\w*|\\*)",
+      "worldedit\\.help",
+      "worldedit\\.generation\\.(\\w*|\\*)",
+      "worldedit\\.history\\.(undo|redo|clear)",
+      "worldedit\\.region\\.(\\w*)",
+      "worldedit\\.regen",
+      "worldedit\\.selection\\.(pos|hpos|chunk)",
+      "worldedit\\.wand(\\toggle)?",
+      "worldedit\\.selection\\.(contract|(out|in)set)",
+      "worldedit\\.analysis\\.(distr|count)",
+      "worldedit\\.selection\\.(size|expand|shift)",
+      "worldedit\\.superpickaxe(\\.(area|recursive))?",
+      "worldedit\\.tool\\.((del)?tree|replacer|data-cycler|flood-fill|lrbuild|info)",
+      "worldedit\\.brush\\.(\\w*)(\\.\\w*)?",
+      "worldedit\\.fill(\\.recursive)?",
+      "worldedit\\.drain",
+      "worldedit\\.fix(lava|water)",
+      "worldedit\\.remove(above|below|near)",
+      "worldedit\\.(snow|thaw|green|extinguish|remove)",
+      "worldedit\\.navigation\\.(jumpto|thru)\\.tool",
+      "multiverse\\.teleport\\.self\\..*",
+      "multiverse\\.core\\.tp\\..*",
+      "multiverse\\.core\\.list\\.worlds",
+      "multiverse\\.core\\.spawn\\.(self|set)"
+    ]
+  },
+  "moderator": {
+    "priority": 40,
+    "displayName": "§cModerator",
+    "prefix": "§cMod §7| ",
+    "inherits": [
+      "builder"
+    ],
+    "permissions": [
+      "essentials\\.nick(\\.(color|format|magic|others))?",
+      "essentials\\.powertool\\.append",
+      "essentials\\.clearinventory",
+      "essentials\\.enderchest\\.(modify|others)",
+      "essentials\\.invsee\\.modify",
+      "essentials\\.kill",
+      "essentials\\.lightning(\\.others)?",
+      "essentials\\.spawnmob\\.stack",
+      "essentials\\.home\\.others",
+      "essentials\\.jump",
+      "essentials\\.tpo(here)?",
+      "essentials\\.tppos",
+      "multiverse\\.teleport\\..*",
+      "multiverse\\.core\\.spawn\\.other",
+      "core\\.(un)?ban(\\.(cheats|spamming|bugusing))?",
+      "totp\\.use"
+    ]
+  },
+  "developer": {
+    "priority": 30,
+    "displayName": "§bDeveloper",
+    "prefix": "§bDev §7| ",
+    "inherits": [
+      "moderator"
+    ],
+    "permissions": [
+      "core\\.ban\\.(special|specialPermanent)",
+      "core\\.unban\\.permanent"
+    ]
+  },
+  "builderLeitung": {
+    "priority": 10,
+    "displayName": "§aBuilderLeitung",
+    "prefix": "§aBuilder §7| ",
+    "inherits": [
+      "developer"
+    ],
+    "permissions": [
+      "essentials\\.god\\.pvp",
+      "essentials\\.speed\\.bypass",
+      "essentials\\.afk\\.others",
+      "essentials\\.helpop\\.receive",
+      "essentials\\.chat\\.ignoreexempt",
+      "essentials\\.list\\.hidden",
+      "essentials\\.mail\\.sendall",
+      "essentials\\.near\\.maxexempt",
+      "essentials\\.clearinventory\\.(all|others)",
+      "essentials\\.essentials",
+      "essentials\\.(ext|gc)",
+      "essentials\\.fireball",
+      "essentials\\.invsee\\.preventmodify",
+      "essentials\\.kill\\.exempt",
+      "essentials\\.vanish(\\.(interact|pvp))?",
+      "essentials\\.delhome\\.others",
+      "essentials\\.delwarp",
+      "essentials\\.sethome(\\.(multiple\\.unlimited|others))",
+      "essentials\\.tpaall",
+      "essentials\\.tpall",
+      "essentials\\.teleport\\.(cooldown\\.bypass|timer\\.(bypass|move))",
+      "worldedit\\.schematic\\.(formats|load|list|save)",
+      "worldedit\\.clipboard\\.save",
+      "worldedit\\.fast",
+      "worldedit\\.tool\\.farwand",
+      "worldedit\\.limit\\.unrestricted",
+      "worldedit\\.anyblock",
+      "worldedit\\.override\\.bedrock",
+      "multiverse\\.help",
+      "multiverse\\..*",
+      "core\\.rank",
+      "rank\\.set\\.testBuilder"
+    ]
+  },
+  "modLeitung": {
+    "priority": 10,
+    "displayName": "§4HeadModerator",
+    "prefix": "§4Mod §7| ",
+    "inherits": [
+      "builderLeitung"
+    ],
+    "permissions": [
+      "core\\.(un)?ban\\.ip",
+      "rank\\.set\\.(default|premium|testSupporter)"
+    ]
+  },
+  "devLeitung": {
+    "priority": 10,
+    "displayName": "§3DevLeitung",
+    "prefix": "§3Dev §7| ",
+    "inherits": [
+      "modLeitung"
+    ],
+    "permissions": [
+      "rank\\.set\\.testDeveloper"
+    ]
+  },
+  "admin": {
+    "priority": 1,
+    "displayName": "§9Admin",
+    "prefix": "§9Admin §7| ",
+    "inherits": [
+      "devLeitung"
+    ],
+    "permissions": [
+      "essentials\\.nuke",
+      "essentials\\.socialspy(\\.others)?",
+      "essentials\\.sudo(\\.exempt)?",
+      "essentials\\.vanish\\.(others|see)",
+      "essentials\\.warp\\.overwrite\\..*",
+      "essentials\\.tptoggle(\\.others)?",
+      "essentials\\.silentjoin",
+      "worldedit\\.reload",
+      "totp\\.reset",
+      "core\\.(ban|kick|mute)\\.exempt",
+      "rank\\.set\\.*"
+    ]
+  }
+}

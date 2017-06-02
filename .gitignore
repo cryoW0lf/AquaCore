@@ -1,0 +1,9 @@
+.gradle/
+.idea/
+Testserver/
+backup/
+servers/
+build/
+libs_export/
+out/
+startDb.sh
