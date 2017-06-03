@@ -1,11 +1,11 @@
 .gradle/
 .idea/
-Testserver/
 backup/
 servers/
 build/
 libs_export/
 out/
-!/Testserver/server.properties
-!/Testserver/paperspigot.jar
+Testserver/*
+!Testserver/server.properties
+!Testserver/paperspigot.jar
 !/Testserver/eula.txt
