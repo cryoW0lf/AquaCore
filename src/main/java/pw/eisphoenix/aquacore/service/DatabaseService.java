@@ -25,12 +25,16 @@ public final class DatabaseService {
 
     public DatabaseService() {
         final Configuration configuration = AquaCore.getConfiguration();
-        mongoClient = new MongoClient(new ServerAddress(configuration.DBHOST, configuration.DBPORT),
-                Collections.singletonList(
-                        MongoCredential.createCredential(configuration.DBUSER, configuration.DBAUTHDB,
-                                configuration.DBPASS.toCharArray())
-                )
-        );
+        if (configuration.DBUSER == null || configuration.DBUSER.isEmpty()) {
+            mongoClient = new MongoClient(new ServerAddress(configuration.DBHOST, configuration.DBPORT));
+        } else {
+            mongoClient = new MongoClient(new ServerAddress(configuration.DBHOST, configuration.DBPORT),
+                    Collections.singletonList(
+                            MongoCredential.createCredential(configuration.DBUSER, configuration.DBAUTHDB,
+                                    configuration.DBPASS.toCharArray())
+                    )
+            );
+        }
         morphia = new Morphia();
         morphia.getMapper().getOptions().setStoreEmpties(true);
         morphia.getMapper().getOptions().setStoreNulls(true);

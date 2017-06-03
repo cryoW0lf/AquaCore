@@ -6,4 +6,6 @@ servers/
 build/
 libs_export/
 out/
-startDb.sh
+!/Testserver/server.properties
+!/Testserver/paperspigot.jar
+!/Testserver/eula.txt
