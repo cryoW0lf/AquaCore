@@ -1,16 +1,18 @@
 package pw.eisphoenix.aquacore.permission;
 
-import pw.eisphoenix.aquacore.CPlayer;
-import pw.eisphoenix.aquacore.dependency.DependencyInjector;
-import pw.eisphoenix.aquacore.dependency.Inject;
-import pw.eisphoenix.aquacore.service.PlayerInfoService;
-import pw.eisphoenix.aquacore.util.ReflectionUtil;
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.permissions.Permission;
 import org.bukkit.permissions.PermissionAttachmentInfo;
+import pw.eisphoenix.aquacore.AquaCore;
+import pw.eisphoenix.aquacore.CPlayer;
+import pw.eisphoenix.aquacore.dependency.DependencyInjector;
+import pw.eisphoenix.aquacore.dependency.Inject;
+import pw.eisphoenix.aquacore.service.PlayerInfoService;
+import pw.eisphoenix.aquacore.util.ReflectionUtil;
 
 import java.lang.reflect.Field;
 import java.util.Set;
@@ -40,7 +42,9 @@ public final class PermissionSystem implements Listener {
 
     @EventHandler
     public void onJoin(final PlayerJoinEvent event) {
-        updatePermissions(event.getPlayer());
+        Bukkit.getScheduler().runTaskAsynchronously(AquaCore.getInstance(), () -> {
+            updatePermissions(event.getPlayer());
+        });
     }
 
     public void updatePermissions(final Player player) {
@@ -52,12 +56,12 @@ public final class PermissionSystem implements Listener {
     }
 
     public class PermissibleBase extends org.bukkit.permissions.PermissibleBase {
-        private final CPlayer cPlayer;
+        private CPlayer cPlayer;
         //private Map<String, Boolean> cache = new HashMap<>();
 
         public PermissibleBase(final Player player) {
             super(player);
-            cPlayer = playerInfoService.getPlayer(player);
+            cPlayer = playerInfoService.getPlayer(player).join();
         }
 
         @Override

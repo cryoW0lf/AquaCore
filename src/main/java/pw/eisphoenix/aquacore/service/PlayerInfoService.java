@@ -9,6 +9,7 @@ import pw.eisphoenix.aquacore.dependency.Injectable;
 import pw.eisphoenix.aquacore.dependency.InjectionHook;
 
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Year: 2017
@@ -28,41 +29,47 @@ public final class PlayerInfoService implements InjectionHook {
         playerStore = new PlayerDAO(CPlayer.class, databaseService.getDatastore());
     }
 
-    public final CPlayer getPlayer(final Player player) {
+    public final CompletableFuture<CPlayer> getPlayer(final Player player) {
         return getPlayer(player.getUniqueId());
     }
 
-    public final CPlayer getPlayer(final UUID uuid) {
-        CPlayer cPlayer = playerStore.findOne("uuid", uuid);
-        if (cPlayer == null) {
-            cPlayer = new CPlayer(Bukkit.getPlayer(uuid).getName(), uuid, permissionService.getRank());
-            playerStore.save(cPlayer);
-        }
-        return cPlayer;
+    public final CompletableFuture<CPlayer> getPlayer(final UUID uuid) {
+        return CompletableFuture.supplyAsync(() -> {
+            CPlayer cPlayer = playerStore.findOne("uuid", uuid);
+            if (cPlayer == null) {
+                cPlayer = new CPlayer(Bukkit.getPlayer(uuid).getName(), uuid, permissionService.getRank().join());
+                playerStore.save(cPlayer);
+            }
+            return cPlayer;
+        });
     }
 
     public final void savePlayer(final CPlayer cPlayer) {
-        playerStore.save(cPlayer);
+        CompletableFuture.runAsync(() -> playerStore.save(cPlayer));
     }
 
-    public final CPlayer getPlayer(final UUID uuid, final String name) {
-        CPlayer cPlayer = playerStore.findOne("uuid", uuid);
-        if (cPlayer == null) {
-            cPlayer = new CPlayer(name, uuid, permissionService.getRank());
-            playerStore.save(cPlayer);
-        }
-        return cPlayer;
-    }
-
-    public CPlayer getPlayer(final String name) {
-        final CPlayer cPlayer = playerStore.findOne("actualUsername", name);
-        if (cPlayer != null) {
+    public final CompletableFuture<CPlayer> getPlayer(final UUID uuid, final String name) {
+        return CompletableFuture.supplyAsync(() -> {
+            CPlayer cPlayer = playerStore.findOne("uuid", uuid);
+            if (cPlayer == null) {
+                cPlayer = new CPlayer(name, uuid, permissionService.getRank().join());
+                playerStore.save(cPlayer);
+            }
             return cPlayer;
-        }
-        final Player player = Bukkit.getPlayer(name);
-        if (player != null) {
-            return playerStore.findOne("actualUsername", player.getName());
-        }
-        return null;
+        });
+    }
+
+    public CompletableFuture<CPlayer> getPlayer(final String name) {
+        return CompletableFuture.supplyAsync(() -> {
+            final CPlayer cPlayer = playerStore.findOne("actualUsername", name);
+            if (cPlayer != null) {
+                return cPlayer;
+            }
+            final Player player = Bukkit.getPlayer(name);
+            if (player != null) {
+                return playerStore.findOne("actualUsername", player.getName());
+            }
+            return null;
+        });
     }
 }

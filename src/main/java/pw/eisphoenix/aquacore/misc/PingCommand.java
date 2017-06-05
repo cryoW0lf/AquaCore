@@ -32,36 +32,33 @@ public final class PingCommand extends CCommand {
     public void onCommand(final CommandSender sender, final String[] args) {
         if (args.length == 0) {
             if (!(sender instanceof Player)) {
-                sender.sendMessage(
-                        messageService.getMessage("cmd.sender.console", MessageService.MessageType.ERROR)
-                );
+                messageService.getMessage("cmd.sender.console", MessageService.MessageType.ERROR).thenAccept(sender::sendMessage);
                 return;
             }
             final Player player = (Player) sender;
-            player.sendMessage(
-                    messageService.getMessage("ping.info", MessageService.MessageType.INFO)
-                            .replaceAll("%PING%", String.valueOf(player.spigot().getPing()))
+            messageService.getMessage("ping.info", MessageService.MessageType.INFO).thenAccept(
+                    message -> sender.sendMessage(message.replaceAll("%PING%", String.valueOf(player.spigot().getPing())))
             );
             return;
         }
 
         if (args.length == 1) {
             if (!sender.hasPermission("core.ping.others")) {
-                sender.sendMessage(messageService.getMessage("cmd.error.perm", MessageService.MessageType.ERROR));
+                messageService.getMessage("cmd.error.perm", MessageService.MessageType.ERROR).thenAccept(sender::sendMessage);
                 return;
             }
             final Player player = Bukkit.getPlayer(args[0]);
             if (player == null) {
-                sender.sendMessage(
-                        messageService.getMessage("cmd.error.player", MessageService.MessageType.ERROR)
-                                .replaceAll("%NAME%", args[0])
+                messageService.getMessage("cmd.error.player", MessageService.MessageType.ERROR).thenAccept(
+                        message -> sender.sendMessage(message.replaceAll("%NAME%", args[0]))
                 );
                 return;
             }
-            sender.sendMessage(
-                    messageService.getMessage("ping.info.others", MessageService.MessageType.INFO)
+            messageService.getMessage("ping.info.others", MessageService.MessageType.INFO).thenAccept(
+                    message -> sender.sendMessage(message
                             .replaceAll("%NAME%", player.getName())
                             .replaceAll("%PING%", String.valueOf(player.spigot().getPing()))
+                    )
             );
         }
     }

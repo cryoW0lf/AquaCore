@@ -5,7 +5,6 @@ import org.apache.commons.lang.Validate;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
-import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.entity.Player;
 import pw.eisphoenix.aquacore.CPlayer;
 import pw.eisphoenix.aquacore.cmd.CCommand;
@@ -17,7 +16,6 @@ import pw.eisphoenix.aquacore.service.MessageService;
 import pw.eisphoenix.aquacore.service.PlayerInfoService;
 
 import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
@@ -50,62 +48,51 @@ public final class BanIPCommand extends CCommand implements InjectionHook {
             return;
         }
 
-        final BanReason banReason = banService.getBanReason(args[1]);
-
-        if (banReason == null) {
-            sender.sendMessage(messageService.getMessage("ban.error.reason", MessageService.MessageType.WARNING)
-                    .replaceAll("%REASON%", args[1].toUpperCase()));
-            return;
-        }
-
-        if (!sender.hasPermission("core.ban." + banReason.getName())) {
-            sender.sendMessage(messageService.getMessage("ban.error.perm", MessageService.MessageType.ERROR)
-                    .replaceAll("%REASON%", banReason.getDisplayName()));
-        }
-
-        final Player player = Bukkit.getPlayer(args[0]);
-        InetAddress inetAddress = null;
-        try {
-            if (player == null) {
-                inetAddress = InetAddress.getByName(args[0]);
-            } else {
-                inetAddress = player.getAddress().getAddress();
+        banService.getBanReason(args[1]).thenAccept(banReason -> {
+            if (banReason == null) {
+                messageService.getMessage("ban.error.reason", MessageService.MessageType.WARNING).thenAccept(
+                        message -> sender.sendMessage(message.replaceAll("%REASON%", args[1].toUpperCase()))
+                );
+                return;
             }
-        } catch (final UnknownHostException ignored) {
-        }
+            if (!sender.hasPermission("core.ban." + banReason.getName())) {
+                messageService.getMessage("ban.error.perm", MessageService.MessageType.ERROR).thenAccept(
+                        message -> sender.sendMessage(message.replaceAll("%NAME%", banReason.getDisplayName()))
+                );
+                return;
+            }
 
-        if (inetAddress == null) {
-            sender.sendMessage(
-                    messageService.getMessage("cmd.error.unknown", MessageService.MessageType.ERROR)
+            final Player player = Bukkit.getPlayer(args[0]);
+            InetAddress inetAddress = null;
+            try {
+                inetAddress = player == null ? InetAddress.getByName(args[0]) : player.getAddress().getAddress();
+            } catch (Exception ignored) {
+            }
+            if (inetAddress == null) {
+                messageService.getMessage("cmd.error.unknown", MessageService.MessageType.ERROR).thenAccept(sender::sendMessage);
+                return;
+            }
+
+            final CPlayer cPlayer = player == null ? null : playerInfoService.getPlayer(player).join();
+            final UUID source = sender instanceof Player ? ((Player) sender).getUniqueId() : SYSTEM_UUID;
+            final BanEntry banEntry = banService.banIP(inetAddress, source, banReason).join();
+            if (cPlayer != null) {
+                banService.banPlayer(cPlayer, source, banReason);
+            }
+
+            if (banEntry == null) {
+                messageService.getMessage("cmd.error.unknown", MessageService.MessageType.ERROR).thenAccept(sender::sendMessage);
+                return;
+            }
+            final InetAddress finalInetAddress = inetAddress;
+            messageService.getMessage("ban.success", MessageService.MessageType.INFO).thenAccept(
+                    message -> sender.sendMessage(message
+                            .replaceAll("%IP%", finalInetAddress.getHostAddress())
+                            .replaceAll("%REASON%", banReason.getDisplayName())
+                            .replaceAll("%DATE%", dateFormat.format(new Date(banEntry.getUntil())))
+                    )
             );
-            return;
-        }
-
-        final CPlayer cPlayer = player == null ? null : playerInfoService.getPlayer(player);
-
-        final BanEntry banEntry;
-        if (sender instanceof Player) {
-            banEntry = banService.banIP(inetAddress, ((Player) sender).getUniqueId(), banReason);
-            if (cPlayer != null) {
-                banService.banPlayer(cPlayer, ((Player) sender).getUniqueId(), banReason);
-            }
-        } else if (sender instanceof ConsoleCommandSender) {
-            banEntry = banService.banIP(inetAddress, SYSTEM_UUID, banReason);
-            if (cPlayer != null) {
-                banService.banPlayer(cPlayer, SYSTEM_UUID, banReason);
-            }
-        } else {
-            sender.sendMessage(messageService.getMessage("cmd.error.sender", MessageService.MessageType.ERROR));
-            return;
-        }
-        if (banEntry == null) {
-            sender.sendMessage(messageService.getMessage("cmd.error.unknown", MessageService.MessageType.ERROR));
-            return;
-        }
-        sender.sendMessage(messageService.getMessage("ban.success.ip", MessageService.MessageType.INFO)
-                .replaceAll("%IP%", inetAddress.getHostAddress())
-                .replaceAll("%REASON%", banReason.getDisplayName())
-                .replaceAll("%DATE%", dateFormat.format(new Date(banEntry.getUntil()))));
+        });
     }
 
     public List<String> onTabComplete(CommandSender sender, String[] args) {
@@ -122,6 +109,6 @@ public final class BanIPCommand extends CCommand implements InjectionHook {
 
     @Override
     public void postInjection() {
-        dateFormat = new SimpleDateFormat(messageService.getMessage("ban.format"));
+        messageService.getMessage("ban.format").thenAccept(message -> dateFormat = new SimpleDateFormat(message));
     }
 }

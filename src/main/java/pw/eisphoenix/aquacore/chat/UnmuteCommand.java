@@ -5,7 +5,6 @@ import org.apache.commons.lang.Validate;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import pw.eisphoenix.aquacore.CPlayer;
 import pw.eisphoenix.aquacore.cmd.CCommand;
 import pw.eisphoenix.aquacore.cmd.CommandInfo;
 import pw.eisphoenix.aquacore.dependency.Inject;
@@ -40,33 +39,30 @@ public final class UnmuteCommand extends CCommand {
             return;
         }
 
-        final CPlayer cPlayer = playerInfoService.getPlayer(args[0]);
-        if (cPlayer == null) {
-            sender.sendMessage(
-                    messageService.getMessage("cmd.error.player", MessageService.MessageType.ERROR)
-                            .replaceAll("%NAME%", args[0])
+        playerInfoService.getPlayer(args[0]).thenAccept(cPlayer -> {
+            if (cPlayer == null) {
+                messageService.getMessage("cmd.error.player", MessageService.MessageType.WARNING).thenAccept(
+                        message -> sender.sendMessage(message.replaceAll("%NAME%", args[0]))
+                );
+                return;
+            }
+            if (!muteService.isMuted(cPlayer.getUuid()).join()) {
+                messageService.getMessage("mute.notmuted", MessageService.MessageType.WARNING).thenAccept(
+                        message -> sender.sendMessage(message.replaceAll("%NAME%", cPlayer.getActualUsername()))
+                );
+                return;
+            }
+            if (!muteService.unmutePlayer(cPlayer.getUuid(),
+                    sender instanceof Player ? ((Player) sender).getUniqueId() : null).join()) {
+                messageService.getMessage("mute.error.nounmute", MessageService.MessageType.ERROR).thenAccept(
+                        message -> sender.sendMessage(message.replaceAll("%NAME%", cPlayer.getActualUsername()))
+                );
+                return;
+            }
+            messageService.getMessage("mute.success.unmute", MessageService.MessageType.INFO).thenAccept(
+                    message -> sender.sendMessage(message.replaceAll("%NAME%", cPlayer.getActualUsername()))
             );
-            return;
-        }
-        if (!muteService.isMuted(cPlayer.getUuid())) {
-            sender.sendMessage(
-                    messageService.getMessage("mute.notmuted", MessageService.MessageType.WARNING)
-                    .replaceAll("%NAME%", cPlayer.getActualUsername())
-            );
-            return;
-        }
-        if (!muteService.unmutePlayer(cPlayer.getUuid(),
-                sender instanceof Player ? ((Player) sender).getUniqueId() : null)) {
-            sender.sendMessage(
-                    messageService.getMessage("mute.error.nounmute", MessageService.MessageType.ERROR)
-                    .replaceAll("%NAME%", cPlayer.getActualUsername())
-            );
-            return;
-        }
-        sender.sendMessage(
-                messageService.getMessage("mute.success.unmute", MessageService.MessageType.INFO)
-                        .replaceAll("%NAME%", cPlayer.getActualUsername())
-        );
+        });
     }
 
     public List<String> onTabComplete(CommandSender sender, String[] args) {

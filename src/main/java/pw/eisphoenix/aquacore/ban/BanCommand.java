@@ -2,11 +2,11 @@ package pw.eisphoenix.aquacore.ban;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.commons.lang.Validate;
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
-import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.entity.Player;
-import pw.eisphoenix.aquacore.CPlayer;
+import pw.eisphoenix.aquacore.AquaCore;
 import pw.eisphoenix.aquacore.cmd.CCommand;
 import pw.eisphoenix.aquacore.cmd.CommandInfo;
 import pw.eisphoenix.aquacore.dependency.Inject;
@@ -47,50 +47,54 @@ public final class BanCommand extends CCommand implements InjectionHook {
             return;
         }
 
-        final BanReason banReason = banService.getBanReason(args[1]);
-
-        if (banReason == null) {
-            sender.sendMessage(messageService.getMessage("ban.error.reason", MessageService.MessageType.WARNING)
-                    .replaceAll("%REASON%", args[1].toUpperCase()));
-            return;
-        }
-
-        if (!sender.hasPermission("core.ban." + banReason.getName())) {
-            sender.sendMessage(messageService.getMessage("ban.error.perm", MessageService.MessageType.ERROR)
-                    .replaceAll("%REASON%", banReason.getDisplayName()));
-        }
-
-        final CPlayer cPlayer = playerInfoService.getPlayer(args[0]);
-
-        if (cPlayer == null) {
-            sender.sendMessage(messageService.getMessage("ban.error.player", MessageService.MessageType.WARNING)
-                    .replaceAll("%NAME%", args[0]));
-            return;
-        }
-
-        final BanEntry banEntry;
-        if (sender instanceof Player) {
-            if (!sender.hasPermission("core.ban.exempt") && cPlayer.getRank().hasPermissions("core.ban.exempt")) {
-                sender.sendMessage(
-                        messageService.getMessage("ban.exempt", MessageService.MessageType.ERROR)
+        banService.getBanReason(args[1]).thenAccept(banReason -> {
+            if (banReason == null) {
+                messageService.getMessage("ban.error.reason", MessageService.MessageType.WARNING).thenAccept(
+                        message -> sender.sendMessage(message.replaceAll("%REASON%", args[1].toUpperCase()))
                 );
                 return;
             }
-            banEntry = banService.banPlayer(cPlayer, ((Player) sender).getUniqueId(), banReason);
-        } else if (sender instanceof ConsoleCommandSender) {
-            banEntry = banService.banPlayer(cPlayer, SYSTEM_UUID, banReason);
-        } else {
-            sender.sendMessage(messageService.getMessage("cmd.error.sender", MessageService.MessageType.ERROR));
-            return;
-        }
-        if (banEntry == null) {
-            sender.sendMessage(messageService.getMessage("cmd.error.unknown", MessageService.MessageType.ERROR));
-            return;
-        }
-        sender.sendMessage(messageService.getMessage("ban.success", MessageService.MessageType.INFO)
-                .replaceAll("%NAME%", cPlayer.getActualUsername())
-                .replaceAll("%REASON%", banReason.getDisplayName())
-                .replaceAll("%DATE%", dateFormat.format(new Date(banEntry.getUntil()))));
+            if (!sender.hasPermission("core.ban." + banReason.getName())) {
+                messageService.getMessage("ban.error.perm", MessageService.MessageType.ERROR).thenAccept(
+                        message -> sender.sendMessage(message.replaceAll("%NAME%", banReason.getDisplayName()))
+                );
+                return;
+            }
+
+            playerInfoService.getPlayer(args[0]).thenAccept(cPlayer -> {
+                if (cPlayer == null) {
+                    messageService.getMessage("ban.error.player", MessageService.MessageType.WARNING).thenAccept(
+                            message -> sender.sendMessage(message.replaceAll("%NAME%", args[0]))
+                    );
+                    return;
+                }
+                if (!sender.hasPermission("core.ban.exempt") && cPlayer.getRank().hasPermissions("core.ban.exempt")) {
+                    messageService.getMessage("ban.exempt", MessageService.MessageType.ERROR).thenAccept(sender::sendMessage);
+                    return;
+                }
+                final BanEntry banEntry = banService.banPlayer(cPlayer, sender instanceof Player ? ((Player) sender).getUniqueId() : SYSTEM_UUID, banReason).join();
+                if (banEntry == null) {
+                    messageService.getMessage("cmd.error.unknown", MessageService.MessageType.ERROR).thenAccept(sender::sendMessage);
+                    return;
+                }
+
+                final Player player = Bukkit.getPlayer(cPlayer.getUuid());
+                if (player != null) {
+                    banService.getBanDenyMessage(banEntry).thenAccept(
+                            denyMessage -> Bukkit.getScheduler().runTask(AquaCore.getInstance(),
+                                    () -> player.kickPlayer(denyMessage))
+                    );
+                }
+
+                messageService.getMessage("ban.success", MessageService.MessageType.INFO).thenAccept(
+                        message -> sender.sendMessage(message
+                                .replaceAll("%NAME%", cPlayer.getActualUsername())
+                                .replaceAll("%REASON%", banReason.getDisplayName())
+                                .replaceAll("%DATE%", dateFormat.format(new Date(banEntry.getUntil())))
+                        )
+                );
+            });
+        });
     }
 
     public List<String> onTabComplete(CommandSender sender, String[] args) {
@@ -107,6 +111,6 @@ public final class BanCommand extends CCommand implements InjectionHook {
 
     @Override
     public void postInjection() {
-        dateFormat = new SimpleDateFormat(messageService.getMessage("ban.format"));
+        messageService.getMessage("ban.format").thenAccept(message -> dateFormat = new SimpleDateFormat(message));
     }
 }

@@ -21,6 +21,7 @@
   "unban.error.permanent": "Du darfst keine permanenten Bans aufheben.",
   "unban.success": "Der Spieler §9§l%NAME%§r§a wurde entbannt!",
   "unban.success.ip": "Die IP §9§l%IP%§r§a wurde entbannt!",
+  "unban.error.ip": "Die IP §9§l%IP%§r§4 konnte nicht entbannt werden!",
   "kick.message": [
     "§b§lAquaCore §f§lNetwork",
     "§aDu wurdest für §9§l%REASON%§r§a",
@@ -55,7 +56,7 @@
   "cmd.error.unknown": "Es ist ein Fehler aufgetreten.",
   "cmd.error.sender": "Dieser Command ist nicht erlaubt!",
   "cmd.error.perm": "Du hast nicht genügend Rechte, diesen Befehl auszuführen",
-  "cmd.error.player": "Der Spieler §9§l%NAME%§r§4 wurde nicht gefunden!",
+  "cmd.error.player": "Der Spieler §9§l%NAME%§r§c wurde nicht gefunden!",
   "cmd.sender.player": "Dieser Command ist nicht für Spieler",
   "cmd.sender.console": "Dieser Command ist nicht für Konsolen",
   "cmd.sender.others": "Dieser Command ist nicht für dich.",

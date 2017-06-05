@@ -6,6 +6,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import pw.eisphoenix.aquacore.AquaCore;
 import pw.eisphoenix.aquacore.cmd.CCommand;
 import pw.eisphoenix.aquacore.cmd.CommandInfo;
 import pw.eisphoenix.aquacore.dependency.Inject;
@@ -39,31 +40,30 @@ public final class KickCommand extends CCommand {
 
         final Player player = Bukkit.getPlayer(args[0]);
         if (player == null) {
-            sender.sendMessage(
-                    messageService.getMessage("ban.error.player", MessageService.MessageType.WARNING)
+            messageService.getMessage("ban.error.player", MessageService.MessageType.WARNING).thenAccept(
+                    message -> sender.sendMessage(message
                             .replaceAll("%PLAYER%", args[0])
+                    )
             );
             return;
         }
         if (!sender.hasPermission("core.ban.exempt") && player.hasPermission("core.kick.exempt")) {
-            sender.sendMessage(
-                    messageService.getMessage("kick.exempt", MessageService.MessageType.ERROR)
-            );
+            messageService.getMessage("kick.exempt", MessageService.MessageType.ERROR).thenAccept(sender::sendMessage);
             return;
         }
-        StringBuilder reason = new StringBuilder(args[1]);
+        final StringBuilder reason = new StringBuilder(args[1]);
         for (int i = 2; i < args.length; i++) {
-            reason.append(args[i]);
+            reason.append(" ").append(args[i]);
         }
-        player.kickPlayer(
-                messageService.getMessage("kick.message")
-                        .replaceAll("%REASON", reason.toString())
-                        .replaceAll("%NAME%", sender.getName())
-        );
-        sender.sendMessage(
-                messageService.getMessage("kick.success", MessageService.MessageType.INFO)
-                        .replaceAll("%NAME", player.getName())
+        messageService.getMessage("kick.message").thenAccept(
+                message -> Bukkit.getScheduler().runTask(AquaCore.getInstance(), () -> player.kickPlayer(message
                         .replaceAll("%REASON%", reason.toString())
+                        .replaceAll("%NAME%", sender.getName()))
+                ));
+        messageService.getMessage("kick.success", MessageService.MessageType.INFO).thenAccept(
+                message -> sender.sendMessage(message
+                        .replaceAll("%NAME%", player.getName())
+                        .replaceAll("%REASON%", reason.toString()))
         );
     }
 

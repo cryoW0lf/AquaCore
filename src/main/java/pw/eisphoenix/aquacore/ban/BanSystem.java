@@ -26,17 +26,24 @@ public final class BanSystem implements Listener {
 
     @EventHandler
     public void onJoin(final AsyncPlayerPreLoginEvent event) {
-        if (banService.isBanned(event.getAddress())) {
-            final BanEntry banEntry = banService.getActualBan(event.getAddress());
-            assert banEntry != null;
-            event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_BANNED, banService.getBanDenyMessage(banEntry));
-        }
-        final CPlayer cPlayer = playerInfoService.getPlayer(event.getUniqueId(), event.getName());
-        if (banService.isBanned(cPlayer)) {
-            final BanEntry banEntry = banService.getActualBan(cPlayer);
-            assert banEntry != null;
-            event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_BANNED, banService.getBanDenyMessage(banEntry));
-
-        }
+        banService.isBanned(event.getAddress()).thenApply(result -> {
+            if (!result) {
+                return true;
+            }
+            event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_BANNED, banService.getBanDenyMessage(
+                    banService.getActualBan(event.getAddress()).join()
+            ).join());
+            return false;
+        }).thenAccept(result -> {
+            if (!result) {
+                return;
+            }
+            final CPlayer cPlayer = playerInfoService.getPlayer(event.getUniqueId(), event.getName()).join();
+            if (banService.isBanned(cPlayer).join()) {
+                event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_BANNED, banService.getBanDenyMessage(
+                        banService.getActualBan(cPlayer).join()
+                ).join());
+            }
+        });
     }
 }

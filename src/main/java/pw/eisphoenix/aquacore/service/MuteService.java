@@ -7,7 +7,9 @@ import pw.eisphoenix.aquacore.dependency.Injectable;
 import pw.eisphoenix.aquacore.dependency.InjectionHook;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Year: 2017
@@ -21,58 +23,59 @@ public final class MuteService implements InjectionHook {
     private DatabaseService databaseService;
     private MuteDAO muteStore;
 
-    public final Mute mutePlayer(final UUID uuid, UUID source, final long length, final String reason) {
-        if (source == null) {
-            source = SYSTEM_UUID;
-        }
-        final Mute mute = getCurrentMute(uuid);
-        if (mute != null) {
-            if (mute.getLength() + mute.getTimestamp() > System.currentTimeMillis() + length) {
-                return null;
+    public final CompletableFuture<Mute> mutePlayer(final UUID uuid, final UUID source, final long length, final String reason) {
+        final UUID finalSource = source == null ? SYSTEM_UUID : source;
+        return getCurrentMute(uuid).thenApply(actualMute -> {
+            if (actualMute != null) {
+                if (actualMute.getLength() + actualMute.getTimestamp() > System.currentTimeMillis() + length) {
+                    return null;
+                }
+                actualMute.setValid(false);
+                muteStore.save(actualMute);
+            }
+            final Mute mute = new Mute(uuid, source, length, reason);
+            if (actualMute != null) {
+                mute.setNotes(mute.getNotes().concat("[Replaced by " + mute.getUuid() + "]"));
+                muteStore.save(mute);
+            }
+            muteStore.save(mute);
+            return mute;
+        });
+    }
+
+    public final CompletableFuture<Boolean> unmutePlayer(final UUID uuid, final UUID source) {
+        final UUID finalSource = source == null ? SYSTEM_UUID : source;
+        return getCurrentMute(uuid).thenApply(mute -> {
+            if (mute == null) {
+                return false;
             }
             mute.setValid(false);
-        }
-        final Mute aMute = new Mute(uuid, source, length, reason);
-        if (mute != null) {
-            mute.setNotes(mute.getNotes().concat("[Replaced by " + aMute.getUuid() + "]"));
+            mute.setNotes(mute.getNotes().concat("[Unmute by " + finalSource + "]"));
             muteStore.save(mute);
-        }
-        muteStore.save(aMute);
-        return aMute;
+            return true;
+        });
     }
 
-    public final boolean unmutePlayer(final UUID uuid, UUID source) {
-        if (source == null) {
-            source = SYSTEM_UUID;
-        }
-        final Mute mute = getCurrentMute(uuid);
-        if (mute == null) {
-            return false;
-        }
-        mute.setValid(false);
-        mute.setNotes(mute.getNotes().concat("[Unmute by " + source + "]"));
-        muteStore.save(mute);
-        return true;
+    public final CompletableFuture<Boolean> isMuted(final UUID uuid) {
+        return getCurrentMute(uuid).thenApply(Objects::nonNull);
     }
 
-    public final boolean isMuted(final UUID uuid) {
-        return getCurrentMute(uuid) != null;
-    }
-
-    public final Mute getCurrentMute(final UUID uuid) {
-        final List<Mute> mutes = getMutes(uuid);
-
-        for (final Mute mute : mutes) {
-            if (mute.isCurrent()) {
-                return mute;
+    public final CompletableFuture<Mute> getCurrentMute(final UUID uuid) {
+        return getMutes(uuid).thenApply(mutes -> {
+            for (final Mute mute : mutes) {
+                if (mute.isCurrent()) {
+                    return mute;
+                }
             }
-        }
-        return null;
+            return null;
+        });
     }
 
-    public final List<Mute> getMutes(final UUID uuid) {
-        return muteStore.find(databaseService.getDatastore().createQuery(Mute.class).filter("player", uuid))
-                .asList();
+    public final CompletableFuture<List<Mute>> getMutes(final UUID uuid) {
+        return CompletableFuture.supplyAsync(() ->
+                muteStore.find(databaseService.getDatastore().createQuery(Mute.class).filter("player", uuid))
+                        .asList()
+        );
     }
 
     @Override

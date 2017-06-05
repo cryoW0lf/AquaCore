@@ -42,7 +42,7 @@
     ],
     "permissions": []
   },
-  "testSupporter": {
+  "testsupporter": {
     "priority": 90,
     "displayName": "§eTestSupporter",
     "prefix": "§eTSup §7| ",
@@ -84,12 +84,12 @@
       "core\\.ping\\.others"
     ]
   },
-  "testBuilder": {
+  "testbuilder": {
     "priority": 80,
     "displayName": "§2TestBuilder",
     "prefix": "§2TBuilder §7| ",
     "inherits": [
-      "testSupporter"
+      "testsupporter"
     ],
     "permissions": [
       "essentials\\.bigtree",
@@ -113,12 +113,12 @@
       "multiverse\\.core\\.confirm"
     ]
   },
-  "testDeveloper": {
+  "testdeveloper": {
     "priority": 70,
     "displayName": "§bTestDeveloper",
     "prefix": "§bTDev §7| ",
     "inherits": [
-      "testBuilder"
+      "testbuilder"
     ],
     "permissions": []
   },
@@ -127,7 +127,7 @@
     "displayName": "§eSupporter",
     "prefix": "§eSupporter §7| ",
     "inherits": [
-      "testDeveloper"
+      "testdeveloper"
     ],
     "permissions": [
       "essentials\\.time\\.set",
@@ -219,7 +219,7 @@
       "core\\.unban\\.permanent"
     ]
   },
-  "builderLeitung": {
+  "builderleitung": {
     "priority": 10,
     "displayName": "§aBuilderLeitung",
     "prefix": "§aBuilder §7| ",
@@ -258,30 +258,30 @@
       "multiverse\\.help",
       "multiverse\\..*",
       "core\\.rank",
-      "rank\\.set\\.testBuilder"
+      "rank\\.set\\.testbuilder"
     ]
   },
-  "modLeitung": {
+  "modleitung": {
     "priority": 10,
     "displayName": "§4HeadModerator",
     "prefix": "§4Mod §7| ",
     "inherits": [
-      "builderLeitung"
+      "builderleitung"
     ],
     "permissions": [
       "core\\.(un)?ban\\.ip",
-      "rank\\.set\\.(default|premium|testSupporter)"
+      "rank\\.set\\.(default|premium|testsupporter)"
     ]
   },
-  "devLeitung": {
+  "devleitung": {
     "priority": 10,
     "displayName": "§3DevLeitung",
     "prefix": "§3Dev §7| ",
     "inherits": [
-      "modLeitung"
+      "modleitung"
     ],
     "permissions": [
-      "rank\\.set\\.testDeveloper"
+      "rank\\.set\\.testdeveloper"
     ]
   },
   "admin": {
@@ -289,7 +289,7 @@
     "displayName": "§9Admin",
     "prefix": "§9Admin §7| ",
     "inherits": [
-      "devLeitung"
+      "devleitung"
     ],
     "permissions": [
       "essentials\\.nuke",

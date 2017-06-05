@@ -11,10 +11,10 @@ import java.nio.charset.StandardCharsets;
 public final class Configuration {
     public String DBHOST = "127.0.0.1";
     public int DBPORT = 27017;
-    public String DBUSER = "admin";
-    public String DBAUTHDB = "admin";
+    public String DBUSER = "";
+    public String DBAUTHDB = "";
+    public String DBPASS = "";
     public String DBNAME = "test";
-    public String DBPASS = "password";
 
     private Configuration() {
     }

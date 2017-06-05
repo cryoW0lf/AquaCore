@@ -25,7 +25,7 @@ public final class TOTPEntry {
 
     public TOTPEntry(final UUID uuid, final String key) {
         this.uuid = uuid;
-        this.key = key;
+        this.key = new String(Base64.getEncoder().encode(key.getBytes(StandardCharsets.UTF_8)));
     }
 
     public TOTPEntry() {

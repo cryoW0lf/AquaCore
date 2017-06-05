@@ -31,28 +31,27 @@ public final class ChatSystem implements Listener, InjectionHook {
 
     @EventHandler
     public final void onChat(final AsyncPlayerChatEvent event) {
-        if (muteService.isMuted(event.getPlayer().getUniqueId())) {
-            event.setCancelled(true);
-            final Mute mute = muteService.getCurrentMute(event.getPlayer().getUniqueId());
-            assert mute != null;
-            event.getPlayer().sendMessage(
-                    messageService.getMessage("mute.message", MessageService.MessageType.WARNING)
-                            .replaceAll("%TIME%", mute.getLength() <= 0 ?
-                                    messageService.getMessage("mute.permanent") :
-                                    messageService.getMessage("mute.date")
-                                            .replaceAll("%DATE%",
-                                                    dateFormat.format(new Date(mute.getTimestamp() + mute.getLength())
-                                                    )
-                                            )
-                            )
-                            .replaceAll("%REASON%", mute.getReason())
-            );
+        final boolean result = muteService.isMuted(event.getPlayer().getUniqueId()).join();
+        if (!result) {
+            return;
         }
+        event.setCancelled(true);
+        final Mute mute = muteService.getCurrentMute(event.getPlayer().getUniqueId()).join();
+        messageService.getMessage("mute.message", MessageService.MessageType.WARNING).thenApply(
+                message -> message.replaceAll("%TIME%", mute.getLength() <= 0 ?
+                        messageService.getMessage("mute.permanent").join() :
+                        messageService.getMessage("mute.date").join()
+                                .replaceAll("%DATE%",
+                                        dateFormat.format(new Date(mute.getTimestamp() + mute.getLength()))
+                                )
+                ).replaceAll("%REASON%", mute.getReason())
+        ).thenAccept(event.getPlayer()::sendMessage);
+
     }
 
 
     @Override
     public final void postInjection() {
-        dateFormat = new SimpleDateFormat(messageService.getMessage("ban.format"));
+        messageService.getMessage("ban.format").thenAccept(message -> dateFormat = new SimpleDateFormat(message));
     }
 }

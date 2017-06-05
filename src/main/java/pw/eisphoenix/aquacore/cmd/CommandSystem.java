@@ -3,10 +3,7 @@ package pw.eisphoenix.aquacore.cmd;
 import org.bukkit.Bukkit;
 import org.bukkit.command.SimpleCommandMap;
 import org.bukkit.entity.Player;
-import pw.eisphoenix.aquacore.ban.BanCommand;
-import pw.eisphoenix.aquacore.ban.BanIPCommand;
-import pw.eisphoenix.aquacore.ban.UnbanCommand;
-import pw.eisphoenix.aquacore.ban.UnbanIPCommand;
+import pw.eisphoenix.aquacore.ban.*;
 import pw.eisphoenix.aquacore.chat.MuteCommand;
 import pw.eisphoenix.aquacore.chat.UnmuteCommand;
 import pw.eisphoenix.aquacore.dependency.DependencyInjector;
@@ -52,6 +49,7 @@ public final class CommandSystem {
         registerCommand(new BanIPCommand());
         registerCommand(new UnbanCommand());
         registerCommand(new UnbanIPCommand());
+        registerCommand(new KickCommand());
         registerCommand(new MuteCommand());
         registerCommand(new UnmuteCommand());
         registerCommand(new RankCommand());
@@ -76,13 +74,22 @@ public final class CommandSystem {
             return;
         }
 
-        if (totpCommand.sudoAction(player, consumer, time * 1000)) {
-            player.sendMessage(
-                    messageService.getMessage("totp.confirm", MessageService.MessageType.INFO)
-                            .replaceAll("%MESSAGE%", "/code <Code>")
-                            .replaceAll("%TIME%", time + " Sekunden")
-            );
-        }
+        totpCommand.hasKey(player).thenAccept(hasKey -> {
+            if (!hasKey) {
+                messageService.getMessage("totp.nokey", MessageService.MessageType.ERROR).thenAccept(player::sendMessage);
+                consumer.accept(null);
+                return;
+            }
+
+            if (totpCommand.sudoAction(player, consumer, time * 1000)) {
+                messageService.getMessage("totp.confirm", MessageService.MessageType.INFO).thenAccept(
+                        message -> player.sendMessage(message
+                                .replaceAll("%MESSAGE%", "/code <Code>")
+                                .replaceAll("%TIME%", time + " Sekunden")
+                        )
+                );
+            }
+        });
     }
 
 }

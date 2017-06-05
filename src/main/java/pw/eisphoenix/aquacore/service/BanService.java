@@ -2,8 +2,6 @@ package pw.eisphoenix.aquacore.service;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import org.bukkit.Bukkit;
-import org.bukkit.entity.Player;
 import pw.eisphoenix.aquacore.AquaCore;
 import pw.eisphoenix.aquacore.CPlayer;
 import pw.eisphoenix.aquacore.ban.BanEntry;
@@ -20,6 +18,9 @@ import java.net.InetAddress;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+
+import static pw.eisphoenix.aquacore.AquaCore.EXECUTOR_SERVICE;
 
 /**
  * Year: 2017
@@ -46,87 +47,92 @@ public final class BanService implements InjectionHook, Observer {
         banStore = new BanDAO(BanEntry.class, databaseService.getDatastore());
         banReasonStore = new BanReasonDAO(BanReason.class, databaseService.getDatastore());
         observerService.addObserver(ClearCacheNotification.class, this);
-        dateFormat = new SimpleDateFormat(messageService.getMessage("ban.format"));
-        if (banReasonStore.count() < 1) {
-            registerDefaultBanReasons();
-        }
-        updateBanReasons();
-    }
-
-    public boolean isBanned(final CPlayer cPlayer) {
-        return getActualBan(cPlayer) != null;
-    }
-
-    public final BanEntry banPlayer(final CPlayer cPlayer, final UUID source, final BanReason banReason) {
-        final BanEntry actualBan = getActualBan(cPlayer);
-        final int often = (int) banStore.count(databaseService.getDatastore().createQuery(BanEntry.class)
-                .filter("cPlayer", cPlayer).filter("banReason", banReason)
-                .filter("unbanned", false));
-        if (actualBan == null || actualBan.getBanReason().getDurations(actualBan.getOften()) <= banReason.getDurations(often)) {
-            final BanEntry banEntry = new BanEntry(source, cPlayer, banReason, often);
-            if (actualBan != null) {
-                actualBan.setNotes(actualBan.getNotes().concat("[Replaced with " + banEntry.getUuid() + "]"));
-                actualBan.setValidBan(false);
+        messageService.getMessage("ban.format").thenAccept(message -> dateFormat = new SimpleDateFormat(message));
+        CompletableFuture.supplyAsync(() -> banReasonStore.count() < 1, EXECUTOR_SERVICE).thenAccept(result -> {
+            if (result) {
+                registerDefaultBanReasons();
             }
-            banStore.save(banEntry);
-            final Player player = Bukkit.getPlayer(cPlayer.getUuid());
-            if (player != null) {
-                Bukkit.getScheduler().runTask(AquaCore.getInstance(),
-                        () -> player.kickPlayer(getBanDenyMessage(banEntry)));
-            }
-            return banEntry;
-        }
-        return null;
+            updateBanReasons();
+        });
     }
 
-    public final boolean unbanPlayer(final BanEntry banEntry, final UUID source) {
-        if (banEntry == null || !banEntry.isCurrent()) {
-            return false;
-        }
-        banEntry.setUnbanned(true);
-        banEntry.setNotes(banEntry.getNotes().concat("[Unbanned by " + source.toString() + "]"));
-        banStore.save(banEntry);
-        return true;
+    public CompletableFuture<Boolean> isBanned(final CPlayer cPlayer) {
+        return getActualBan(cPlayer).thenApply(Objects::nonNull);
     }
 
-    public final String getBanDenyMessage(final BanEntry banEntry) {
-        return messageService.getMessage("ban.deny")
-                .replaceAll("%REASON%", banEntry.getBanReason().getDisplayName())
-                .replaceAll("%UNTIL%", banEntry.getUntil() == -1 ? messageService.getMessage("ban.forever") :
-                        messageService.getMessage("ban.time")
-                                .replaceAll(
-                                        "%DATE%", dateFormat.format(new Date(banEntry.getUntil()))
-                                )
-                );
-    }
-
-    public BanEntry getActualBan(final CPlayer cPlayer) {
-        final List<BanEntry> banEntries = getBanEntries(cPlayer);
-        for (final BanEntry banEntry : banEntries) {
-            if (banEntry.isCurrent()) {
+    public final CompletableFuture<BanEntry> banPlayer(final CPlayer cPlayer, final UUID source, final BanReason banReason) {
+        return getActualBan(cPlayer).thenApply(actualBan -> {
+            final int often = (int) banStore.count(databaseService.getDatastore().createQuery(BanEntry.class)
+                    .filter("cPlayer", cPlayer).filter("banReason", banReason)
+                    .filter("unbanned", false));
+            if (actualBan == null || actualBan.getBanReason().getDurations(actualBan.getOften()) <= banReason.getDurations(often)) {
+                final BanEntry banEntry = new BanEntry(source, cPlayer, banReason, often);
+                if (actualBan != null) {
+                    actualBan.setNotes(actualBan.getNotes().concat("[Replaced with " + banEntry.getUuid() + "]"));
+                    actualBan.setValidBan(false);
+                }
+                banStore.save(banEntry);
                 return banEntry;
             }
-        }
-        return null;
+            return null;
+        });
     }
 
-    private List<BanEntry> getBanEntries(final CPlayer cPlayer) {
-        return banStore.find(
-                databaseService.getDatastore().createQuery(BanEntry.class).filter("cPlayer", cPlayer)
-        ).asList();
-    }
-
-    public BanReason getBanReason(final String name) {
-        for (final BanReason banReason : banReasons) {
-            if (banReason.isName(name)) {
-                return banReason;
+    public final CompletableFuture<Boolean> unbanPlayer(final BanEntry banEntry, final UUID source) {
+        return CompletableFuture.supplyAsync(() -> {
+            if (banEntry == null || !banEntry.isCurrent()) {
+                return false;
             }
-        }
-        return null;
+            banEntry.setUnbanned(true);
+            banEntry.setNotes(banEntry.getNotes().concat("[Unbanned by " + source.toString() + "]"));
+            banStore.save(banEntry);
+            return true;
+        }, EXECUTOR_SERVICE);
+    }
+
+    public final CompletableFuture<String> getBanDenyMessage(final BanEntry banEntry) {
+        return messageService.getMessage("ban.deny").thenCombine(messageService.getMessage(
+                banEntry.getUntil() == -1 ? "ban.forever" : "ban.time"),
+                (denyMessage, until) -> denyMessage
+                        .replaceAll("%REASON%", banEntry.getBanReason().getDisplayName())
+                        .replaceAll("%UNTIL%", banEntry.getUntil() == -1 ?
+                                until :
+                                until.replaceAll("%DATE%", dateFormat.format(new Date(banEntry.getUntil())))
+                        )
+        );
+    }
+
+    public CompletableFuture<BanEntry> getActualBan(final CPlayer cPlayer) {
+        return getBanEntries(cPlayer).thenApply(banEntries -> {
+            for (final BanEntry banEntry : banEntries) {
+                if (banEntry.isCurrent()) {
+                    return banEntry;
+                }
+            }
+            return null;
+        });
+    }
+
+    private CompletableFuture<List<BanEntry>> getBanEntries(final CPlayer cPlayer) {
+        return CompletableFuture.supplyAsync(() ->
+                        banStore.find(
+                                databaseService.getDatastore().createQuery(BanEntry.class).filter("cPlayer", cPlayer)
+                        ).asList()
+                , EXECUTOR_SERVICE);
+    }
+
+    public CompletableFuture<BanReason> getBanReason(final String name) {
+        return CompletableFuture.supplyAsync(() -> {
+            for (final BanReason banReason : banReasons) {
+                if (banReason.isName(name)) {
+                    return banReason;
+                }
+            }
+            return null;
+        }, EXECUTOR_SERVICE);
     }
 
     private void registerDefaultBanReasons() {
-        System.out.println("Hey");
         final JsonObject rootObject = AquaCore.JSON_PARSER.parse(new InputStreamReader(
                 getClass().getResourceAsStream("/banReasons.json")
         )).getAsJsonObject();
@@ -143,7 +149,7 @@ public final class BanService implements InjectionHook, Observer {
     }
 
     private void updateBanReasons() {
-        banReasons = banReasonStore.find().asList();
+        CompletableFuture.runAsync(() -> banReasons = banReasonStore.find().asList(), EXECUTOR_SERVICE);
     }
 
     public final List<String> getBanReasons(final String s) {
@@ -170,47 +176,46 @@ public final class BanService implements InjectionHook, Observer {
         }
     }
 
-    public boolean isBanned(final InetAddress address) {
-        return getActualBan(address) != null;
+    public CompletableFuture<Boolean> isBanned(final InetAddress address) {
+        return getActualBan(address).thenApply(Objects::nonNull);
     }
 
-    public BanEntry getActualBan(final InetAddress address) {
-        final List<BanEntry> banEntries = getBanEntries(address);
-        for (final BanEntry banEntry : banEntries) {
-            if (banEntry.isCurrent()) {
-                return banEntry;
-            }
-        }
-        return null;
-    }
-
-    private List<BanEntry> getBanEntries(final InetAddress address) {
-        return banStore.find(
-                databaseService.getDatastore().createQuery(BanEntry.class)
-                        .filter("address", address.getHostAddress())
-        ).asList();
-    }
-
-    public final BanEntry banIP(final InetAddress address, final UUID source, final BanReason banReason) {
-        final BanEntry actualBan = getActualBan(address);
-        final int often = (int) banStore.count(databaseService.getDatastore().createQuery(BanEntry.class)
-                .filter("banReason", banReason).filter("address", address.getHostAddress())
-                .filter("unbanned", false));
-        if (actualBan == null || actualBan.getBanReason().getDurations(actualBan.getOften()) <= banReason.getDurations(often)) {
-            final BanEntry banEntry = new BanEntry(source, address.getHostAddress(), banReason, often);
-            if (actualBan != null) {
-                actualBan.setNotes(actualBan.getNotes().concat("[Replaced with " + banEntry.getUuid() + "]"));
-                actualBan.setValidBan(false);
-            }
-            banStore.save(banEntry);
-            for (final Player player : Bukkit.getOnlinePlayers()) {
-                if (player.getAddress().getAddress().equals(address)) {
-                    Bukkit.getScheduler().runTask(AquaCore.getInstance(),
-                            () -> player.kickPlayer(getBanDenyMessage(banEntry)));
+    public CompletableFuture<BanEntry> getActualBan(final InetAddress address) {
+        return getBanEntries(address).thenApply(banEntries -> {
+            for (final BanEntry banEntry : banEntries) {
+                if (banEntry.isCurrent()) {
+                    return banEntry;
                 }
             }
-            return banEntry;
-        }
-        return null;
+            return null;
+        });
+    }
+
+    private CompletableFuture<List<BanEntry>> getBanEntries(final InetAddress address) {
+        return CompletableFuture.supplyAsync(() ->
+                        banStore.find(
+                                databaseService.getDatastore()
+                                        .createQuery(BanEntry.class).filter("address", address.getHostAddress())
+                        ).asList()
+                , EXECUTOR_SERVICE);
+    }
+
+    public final CompletableFuture<BanEntry> banIP(final InetAddress address, final UUID source, final BanReason banReason) {
+        return getActualBan(address).thenApply(actualBan -> {
+            final int often = (int) banStore.count(databaseService.getDatastore().createQuery(BanEntry.class)
+                    .filter("banReason", banReason).filter("address", address.getHostAddress())
+                    .filter("unbanned", false));
+            if (actualBan == null || actualBan.getBanReason().getDurations(actualBan.getOften()) <= banReason.getDurations(often)) {
+                final BanEntry banEntry = new BanEntry(source, address.getHostAddress(), banReason, often);
+                if (actualBan != null) {
+                    actualBan.setNotes(actualBan.getNotes().concat("[Replaced with " + banEntry.getUuid() + "]"));
+                    actualBan.setValidBan(false);
+                }
+                banStore.save(banEntry);
+                return banEntry;
+            }
+            return null;
+        });
+
     }
 }

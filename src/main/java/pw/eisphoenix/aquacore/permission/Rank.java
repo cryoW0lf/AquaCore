@@ -1,15 +1,18 @@
 package pw.eisphoenix.aquacore.permission;
 
+import org.bson.types.ObjectId;
+import org.mongodb.morphia.annotations.*;
 import pw.eisphoenix.aquacore.dependency.DependencyInjector;
 import pw.eisphoenix.aquacore.dependency.Inject;
 import pw.eisphoenix.aquacore.service.PermissionService;
-import org.bson.types.ObjectId;
-import org.mongodb.morphia.annotations.*;
 
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.regex.Pattern;
+
+import static pw.eisphoenix.aquacore.AquaCore.EXECUTOR_SERVICE;
 
 /**
  * Year: 2017
@@ -81,33 +84,64 @@ public class Rank {
         return finalPermissions;
     }
 
-    @PostLoad
     public final void recalculatePermissions() {
         if (!dirty) {
             return;
         }
         dirty = false;
-        final Rank[] ranks = new Rank[2];
-        inherits.sort((o1, o2) -> {
-            ranks[0] = permissionService.getRank(o1);
-            ranks[1] = permissionService.getRank(o2);
-            if (ranks[0] == null) {
-                    return ranks[1] == null ? 0 : -1;
+        CompletableFuture.runAsync(() -> inherits.sort((o1, o2) -> {
+            final Rank rank0 = permissionService.getRankSync(o1);
+            final Rank rank1 = permissionService.getRankSync(o2);
+            if (rank0 == null) {
+                return rank1 == null ? 0 : -1;
             }
-            if (ranks[1] == null) {
+            if (rank1 == null) {
                 return 1;
             }
-            return ranks[0].getPriority() > ranks[1].getPriority() ? 1 :
-                    ranks[0].getPriority() < ranks[1].getPriority() ? -1 : 0;
+            return rank0.getPriority() > rank1.getPriority() ? 1 :
+                    rank0.getPriority() < rank1.getPriority() ? -1 : 0;
+        }), EXECUTOR_SERVICE).thenAccept(aVoid -> {
+            calculatedPermissions.clear();
+            Rank rank;
+            for (final String rankName : inherits) {
+                rank = permissionService.getRankSync(rankName);
+                if (rank == null) {
+                    continue;
+                }
+                rank.recalculatePermissionsSync();
+                calculatedPermissions.addAll(rank.getCalculatedPermissions());
+            }
+            calculatedPermissions.addAll(permissions);
+            recalculateFinalPermissions();
+        });
+    }
+
+    @PostLoad
+    public void recalculatePermissionsSync() {
+        if (!dirty) {
+            return;
+        }
+        dirty = false;
+        inherits.sort((o1, o2) -> {
+            final Rank rank0 = permissionService.getRankSync(o1);
+            final Rank rank1 = permissionService.getRankSync(o2);
+            if (rank0 == null) {
+                return rank1 == null ? 0 : -1;
+            }
+            if (rank1 == null) {
+                return 1;
+            }
+            return rank0.getPriority() > rank1.getPriority() ? 1 :
+                    rank0.getPriority() < rank1.getPriority() ? -1 : 0;
         });
         calculatedPermissions.clear();
         Rank rank;
         for (final String rankName : inherits) {
-            rank = permissionService.getRank(rankName);
+            rank = permissionService.getRankSync(rankName);
             if (rank == null) {
                 continue;
             }
-            rank.recalculatePermissions();
+            rank.recalculatePermissionsSync();
             calculatedPermissions.addAll(rank.getCalculatedPermissions());
         }
         calculatedPermissions.addAll(permissions);
@@ -128,7 +162,6 @@ public class Rank {
             }
         }
     }
-
 
 
     public boolean hasPermissions(final String permission) {

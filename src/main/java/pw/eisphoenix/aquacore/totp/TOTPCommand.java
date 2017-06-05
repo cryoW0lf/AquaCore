@@ -1,7 +1,10 @@
 package pw.eisphoenix.aquacore.totp;
 
 import com.google.common.collect.ImmutableList;
-import pw.eisphoenix.aquacore.CPlayer;
+import org.apache.commons.lang3.Validate;
+import org.bukkit.ChatColor;
+import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Player;
 import pw.eisphoenix.aquacore.cmd.CCommand;
 import pw.eisphoenix.aquacore.cmd.CommandInfo;
 import pw.eisphoenix.aquacore.cmd.CommandOption;
@@ -9,15 +12,12 @@ import pw.eisphoenix.aquacore.dependency.Inject;
 import pw.eisphoenix.aquacore.service.MessageService;
 import pw.eisphoenix.aquacore.service.PlayerInfoService;
 import pw.eisphoenix.aquacore.service.SecurityService;
-import org.apache.commons.lang3.Validate;
-import org.bukkit.ChatColor;
-import org.bukkit.command.CommandSender;
-import org.bukkit.entity.Player;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -56,115 +56,95 @@ public final class TOTPCommand extends CCommand {
 
         switch (args[0].toLowerCase()) {
             case "create":
-                if (securityService.hasKey(uuid)) {
-                    sender.sendMessage(messageService.getMessage("totp.alreadyexists",
-                            MessageService.MessageType.WARNING)
+                securityService.hasKey(uuid).thenAccept(hasKey -> {
+                    if (hasKey) {
+                        messageService.getMessage("totp.alreadyexists", MessageService.MessageType.WARNING).thenAccept(sender::sendMessage);
+                        messageService.getMessage("cmd.confirm", MessageService.MessageType.WARNING).thenAccept(
+                                message -> sender.sendMessage(message
+                                        .replaceAll("%MESSAGE%", "/totp confirm")
+                                        .replaceAll("%TIME%", "10 Sekunden")
+                                )
+                        );
+                        timeStamps.put(uuid, System.currentTimeMillis() + 100000);
+                        return;
+                    }
+                    messageService.getMessage("totp.create", MessageService.MessageType.INFO).thenAccept(
+                            message -> sender.sendMessage(message.replaceAll("%KEY%", securityService.generateKey(uuid).join()))
                     );
-                    sender.sendMessage(
-                            messageService.getMessage("command.confirm", MessageService.MessageType.WARNING)
-                                    .replaceAll("%MESSAGE%", "/totp confirm")
-                                    .replaceAll("%TIME%", "10 Sekunden")
-                    );
-                    timeStamps.put(uuid, System.currentTimeMillis() + 100000);
-                    return;
-                }
-                sender.sendMessage(
-                        messageService.getMessage("totp.create", MessageService.MessageType.INFO)
-                                .replaceAll("%KEY%", securityService.generateKey(uuid))
-                );
+                });
                 return;
             case "confirm":
                 if (!timeStamps.containsKey(uuid)) {
-                    sender.sendMessage(
-                            messageService.getMessage("command.confirm.error", MessageService.MessageType.ERROR)
-                    );
+                    messageService.getMessage("command.confirm.error", MessageService.MessageType.ERROR).thenAccept(sender::sendMessage);
                     return;
                 }
                 final long timeStamp = timeStamps.remove(uuid);
                 if (System.currentTimeMillis() <= timeStamp) {
-                    sender.sendMessage(
-                            messageService.getMessage("totp.create", MessageService.MessageType.INFO)
-                                    .replaceAll("%KEY%", securityService.generateKey(uuid))
+                    messageService.getMessage("totp.create", MessageService.MessageType.INFO).thenAccept(
+                            message -> sender.sendMessage(message.replaceAll("%KEY%", securityService.generateKey(uuid).join()))
                     );
                 } else {
-                    sender.sendMessage(
-                            messageService.getMessage("command.confirm.time")
-                    );
+                    messageService.getMessage("command.confirm.time").thenAccept(sender::sendMessage);
                 }
                 return;
             case "exit":
                 if (!securityService.isSudo(uuid)) {
-                    sender.sendMessage(
-                            messageService.getMessage("totp.notsudo", MessageService.MessageType.ERROR)
-                    );
+                    messageService.getMessage("totp.notsudo", MessageService.MessageType.ERROR).thenAccept(sender::sendMessage);
                     return;
                 }
                 securityService.removeSudo(uuid);
-                sender.sendMessage(
-                        messageService.getMessage("totp.removesudo", MessageService.MessageType.INFO)
-                );
+                messageService.getMessage("totp.removesudo", MessageService.MessageType.INFO).thenAccept(sender::sendMessage);
                 return;
             case "reset":
                 if (args.length != 2) {
                     sender.sendMessage(ChatColor.RED + "Usage: " + getUsage());
                     return;
                 }
-                getCommandSystem().sudoAction((Player) sender, player -> {
-                    final CPlayer cPlayer = playerInfoService.getPlayer(args[1]);
+                getCommandSystem().sudoAction((Player) sender, player -> playerInfoService.getPlayer(args[1]).thenAccept(cPlayer -> {
                     if (cPlayer == null) {
-                        player.sendMessage(
-                                messageService.getMessage("cmd.error.player", MessageService.MessageType.ERROR)
-                                        .replaceAll("%NAME%", args[1])
+                        messageService.getMessage("cmd.error.player", MessageService.MessageType.ERROR).thenAccept(
+                                message -> player.sendMessage(message.replaceAll("%NAME%", args[1]))
                         );
                         return;
                     }
-                    if (!securityService.hasKey(cPlayer.getUuid())) {
-                        player.sendMessage(
-                                messageService.getMessage("totp.nokey.others", MessageService.MessageType.ERROR)
-                        );
+                    if (!securityService.hasKey(cPlayer.getUuid()).join()) {
+                        messageService.getMessage("totp.nokey.others", MessageService.MessageType.ERROR).thenAccept(player::sendMessage);
                         return;
                     }
                     securityService.removeKey(cPlayer.getUuid());
-                    player.sendMessage(
-                            messageService.getMessage("totp.removekey", MessageService.MessageType.INFO)
-                    );
-                }, 30);
+                    messageService.getMessage("totp.removekey", MessageService.MessageType.INFO).thenAccept(player::sendMessage);
+                }), 30);
                 return;
             default:
                 clearAction(((Player) sender).getUniqueId());
-                if (!securityService.hasKey(uuid)) {
-                    sender.sendMessage(
-                            messageService.getMessage("totp.nokey", MessageService.MessageType.ERROR)
-                    );
-                    return;
-                }
-                if (securityService.isSudo(uuid)) {
-                    sender.sendMessage(
-                            messageService.getMessage("totp.alreadysudo", MessageService.MessageType.INFO)
-                    );
-                    return;
-                }
-                final int authNumber;
-                try {
-                    StringBuilder builder = new StringBuilder(args[0]);
-                    for (int i = 1; i < args.length; i++) {
-                        builder.append(args[i]);
+                securityService.hasKey(uuid).thenAccept(hasKey -> {
+                    if (!hasKey) {
+                        messageService.getMessage("totp.nokey", MessageService.MessageType.ERROR).thenAccept(sender::sendMessage);
+                        return;
                     }
-                    authNumber = Integer.valueOf(builder.toString());
-                } catch (final NumberFormatException e) {
-                    sender.sendMessage(
-                            messageService.getMessage("totp.onlynumbers", MessageService.MessageType.ERROR)
-                    );
-                    return;
-                }
-                final boolean success = securityService.enterSudo(uuid, authNumber);
-                sender.sendMessage(
-                        messageService.getMessage(success ? "totp.success" : "totp.wrong",
-                                success ? MessageService.MessageType.INFO : MessageService.MessageType.ERROR)
-                );
-                if (success) {
-                    onSuccess((Player) sender);
-                }
+
+                    if (securityService.isSudo(uuid)) {
+                        messageService.getMessage("totp.alreadysudo", MessageService.MessageType.INFO).thenAccept(sender::sendMessage);
+                        return;
+                    }
+                    final int authNumber;
+                    try {
+                        StringBuilder builder = new StringBuilder(args[0]);
+                        for (int i = 1; i < args.length; i++) {
+                            builder.append(args[i]);
+                        }
+                        authNumber = Integer.valueOf(builder.toString());
+                    } catch (final NumberFormatException e) {
+                        messageService.getMessage("totp.onlynumbers", MessageService.MessageType.ERROR).thenAccept(sender::sendMessage);
+                        return;
+                    }
+                    final boolean success = securityService.enterSudo(uuid, authNumber).join();
+                    messageService.getMessage(success ? "totp.success" : "totp.wrong",
+                            success ? MessageService.MessageType.INFO : MessageService.MessageType.ERROR).thenAccept(sender::sendMessage);
+                    if (success) {
+                        onSuccess((Player) sender);
+                    }
+                });
         }
     }
 
@@ -202,6 +182,10 @@ public final class TOTPCommand extends CCommand {
             return list;
         }
         return super.onTabComplete(sender, args);
+    }
+
+    public CompletableFuture<Boolean> hasKey(final Player player) {
+        return securityService.hasKey(player.getUniqueId());
     }
 
     private class SudoAction {

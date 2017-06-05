@@ -42,7 +42,7 @@ public final class DependencyInjector {
         }
     }
 
-    private static void loadClass(final Class<?> clazz) {
+    public static void loadClass(final Class<?> clazz) {
         try {
             final Object object = clazz.getConstructor().newInstance();
             dependencies.put(clazz, object);

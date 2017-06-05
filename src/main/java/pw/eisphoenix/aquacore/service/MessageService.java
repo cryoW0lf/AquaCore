@@ -12,6 +12,9 @@ import pw.eisphoenix.aquacore.dependency.InjectionHook;
 
 import java.io.InputStreamReader;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+
+import static pw.eisphoenix.aquacore.AquaCore.EXECUTOR_SERVICE;
 
 /**
  * Year: 2017
@@ -27,25 +30,29 @@ public final class MessageService implements InjectionHook {
     @Override
     public void postInjection() {
         messageDAO = new MessageDAO(Message.class, databaseService.getDatastore());
-        if (messageDAO.count() < 1) {
-            registerDefaultMessages();
-        }
+        CompletableFuture.supplyAsync(() -> messageDAO.count() < 1, EXECUTOR_SERVICE).thenAccept(result -> {
+            if (result) {
+                registerDefaultMessages();
+            }
+        });
     }
 
-    public final String getMessage(final String key) {
-        final Message message = messageDAO.findOne(
-                databaseService.getDatastore().createQuery(Message.class).filter("key", key));
-        if (message == null) {
-            return "MESSAGE ERROR";
-        }
-        return message.getMessage();
+    public final CompletableFuture<String> getMessage(final String key) {
+        return CompletableFuture.supplyAsync(() -> {
+            final Message message = messageDAO.findOne(
+                    databaseService.getDatastore().createQuery(Message.class).filter("key", key));
+            if (message == null) {
+                return "MESSAGE ERROR";
+            }
+            return message.getMessage();
+        }, EXECUTOR_SERVICE);
     }
 
     private void registerMessage(final String key, final String value) {
         messageDAO.save(new Message(key, value));
     }
 
-    public final void registerDefaultMessages() {
+    private void registerDefaultMessages() {
         final JsonObject rootObject = AquaCore.JSON_PARSER.parse(new InputStreamReader(
                 getClass().getResourceAsStream("/messages.json")
         )).getAsJsonObject();
@@ -76,10 +83,12 @@ public final class MessageService implements InjectionHook {
         }
     }
 
-    public final String getMessage(final String key, final MessageType messageType) {
-        return getMessage("message." + messageType.name().toLowerCase())
-                .replaceAll("%MESSAGE%", getMessage(key))
-                .replaceAll("%PPREFIX%", getMessage("prefix"));
+    public final CompletableFuture<String> getMessage(final String key, final MessageType messageType) {
+        return getMessage("message." + messageType.name().toLowerCase()).thenCombine(getMessage(key), (message, text) ->
+                message.replaceAll("%MESSAGE%", text)
+        ).thenCombine(getMessage("prefix"), (message, prefix) ->
+                message.replaceAll("%PPREFIX%", prefix)
+        );
     }
 
     public enum MessageType {

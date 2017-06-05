@@ -13,6 +13,9 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+
+import static pw.eisphoenix.aquacore.AquaCore.EXECUTOR_SERVICE;
 
 /**
  * Year: 2017
@@ -30,21 +33,29 @@ public final class PermissionService implements InjectionHook {
     @Override
     public final void postInjection() {
         rankStore = new RankDAO(Rank.class, databaseService.getDatastore());
-        if (rankStore.count() < 1) {
-            registerDefaultRanks();
-        }
+        CompletableFuture.supplyAsync(() -> rankStore.count() < 1, EXECUTOR_SERVICE).thenAccept(
+                result -> {
+                    if (result) {
+                        registerDefaultRanks();
+                    }
+                }
+        );
     }
 
-    public final Rank getRank() {
+    public final CompletableFuture<Rank> getRank() {
         return getRank("default");
     }
 
-    public final Rank getRank(final String name) {
+    public final CompletableFuture<Rank> getRank(final String name) {
+        return CompletableFuture.supplyAsync(() -> rankStore.findOne("name", name));
+    }
+
+    public final Rank getRankSync(final String name) {
         return rankStore.findOne("name", name);
     }
 
-    public final List<Rank> getRanks() {
-        return rankStore.find().asList();
+    public final CompletableFuture<List<Rank>> getRanks() {
+        return CompletableFuture.supplyAsync(() -> rankStore.find().asList());
     }
 
     private void registerDefaultRanks() {

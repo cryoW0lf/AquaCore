@@ -7,7 +7,6 @@ import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import pw.eisphoenix.aquacore.AquaCore;
-import pw.eisphoenix.aquacore.CPlayer;
 import pw.eisphoenix.aquacore.cmd.CCommand;
 import pw.eisphoenix.aquacore.cmd.CommandInfo;
 import pw.eisphoenix.aquacore.dependency.Inject;
@@ -16,6 +15,7 @@ import pw.eisphoenix.aquacore.service.PermissionService;
 import pw.eisphoenix.aquacore.service.PlayerInfoService;
 
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -43,81 +43,81 @@ public final class RankCommand extends CCommand {
             return;
         }
 
-        final CPlayer cPlayer = playerInfoService.getPlayer(args[0]);
+        playerInfoService.getPlayer(args[0]).thenAccept(cPlayer -> {
+            if (cPlayer == null) {
+                messageService.getMessage("cmd.error.player", MessageService.MessageType.WARNING).thenAccept(
+                        message -> sender.sendMessage(message.replaceAll("%NAME%", args[0]))
+                );
+                return;
+            }
 
-        if (cPlayer == null) {
-            sender.sendMessage(messageService.getMessage("cmd.error.player", MessageService.MessageType.WARNING)
-                    .replaceAll("%NAME%", args[0]));
-            return;
-        }
-
-        if (args.length == 1) {
-            if (sender instanceof Player) {
-                getCommandSystem().sudoAction((Player) sender, player -> {
-                    player.sendMessage(
-                            messageService.getMessage("rank.info", MessageService.MessageType.INFO)
+            if (args.length == 1) {
+                if (sender instanceof Player) {
+                    getCommandSystem().sudoAction((Player) sender,
+                            player -> messageService.getMessage("rank.info", MessageService.MessageType.INFO).thenAccept(
+                                    message -> player.sendMessage(message
+                                            .replaceAll("%NAME%", cPlayer.getActualUsername())
+                                            .replaceAll("%RANK%", cPlayer.getRank().getDisplayName())
+                                    )
+                            ), 30);
+                } else {
+                    messageService.getMessage("rank.info", MessageService.MessageType.INFO).thenAccept(
+                            message -> sender.sendMessage(message
                                     .replaceAll("%NAME%", cPlayer.getActualUsername())
                                     .replaceAll("%RANK%", cPlayer.getRank().getDisplayName())
+                            )
                     );
-                }, 30);
-            } else {
-                sender.sendMessage(
-                        messageService.getMessage("rank.info", MessageService.MessageType.INFO)
-                                .replaceAll("%NAME%", cPlayer.getActualUsername())
-                                .replaceAll("%RANK%", cPlayer.getRank().getDisplayName())
-                );
+                }
+                return;
             }
-            return;
-        }
 
-        if (args.length == 2) {
-            final Rank rank = permissionService.getRank(args[1].toLowerCase());
-            if (rank == null) {
-                sender.sendMessage(
-                        messageService.getMessage("rank.error", MessageService.MessageType.WARNING)
-                                .replaceAll("%RANK%", args[1])
-                );
-                return;
-            }
-            if (!sender.hasPermission("rank.set." + rank.getName())) {
-                sender.sendMessage(
-                        messageService.getMessage("rank.error.noperm", MessageService.MessageType.ERROR)
-                );
-                return;
-            }
-            final Player target = Bukkit.getPlayer(cPlayer.getUuid());
-            if (sender instanceof Player) {
-                getCommandSystem().sudoAction((Player) sender, player -> {
-                    if (!player.hasPermission("rank.set." + rank.getName())) {
-                        player.sendMessage(
-                                messageService.getMessage("rank.error.noperm", MessageService.MessageType.ERROR)
+            if (args.length == 2) {
+                final Rank rank = permissionService.getRank(args[1].toLowerCase()).join();
+                if (rank == null) {
+                    messageService.getMessage("rank.error", MessageService.MessageType.WARNING).thenAccept(
+                            message -> sender.sendMessage(message.replaceAll("%RANK%", args[1]))
+                    );
+                    return;
+                }
+                if (!sender.hasPermission("rank.set." + rank.getName())) {
+                    messageService.getMessage("rank.error.noperm", MessageService.MessageType.ERROR).thenAccept(sender::sendMessage);
+                    return;
+                }
+                if (sender instanceof Player) {
+                    getCommandSystem().sudoAction((Player) sender, player -> {
+                        if (!player.hasPermission("rank.set." + rank.getName())) {
+                            messageService.getMessage("rank.error.noperm", MessageService.MessageType.ERROR).thenAccept(player::sendMessage);
+                            return;
+                        }
+                        cPlayer.setRank(rank);
+                        playerInfoService.savePlayer(cPlayer);
+                        final Player target = Bukkit.getPlayer(cPlayer.getUuid());
+                        if (target != null) {
+                            AquaCore.getInstance().getPermissionSystem().updatePermissions(target);
+                        }
+                        messageService.getMessage("rank.success", MessageService.MessageType.INFO).thenAccept(
+                                message -> player.sendMessage(message
+                                        .replaceAll("%NAME%", cPlayer.getActualUsername())
+                                        .replaceAll("%RANK%", cPlayer.getRank().getDisplayName())
+                                )
                         );
-                        return;
-                    }
+                    }, 30);
+                } else {
+                    final Player target = Bukkit.getPlayer(cPlayer.getUuid());
                     cPlayer.setRank(rank);
                     playerInfoService.savePlayer(cPlayer);
                     if (target != null) {
                         AquaCore.getInstance().getPermissionSystem().updatePermissions(target);
                     }
-                    player.sendMessage(
-                            messageService.getMessage("rank.success", MessageService.MessageType.INFO)
+                    messageService.getMessage("rank.success", MessageService.MessageType.INFO).thenAccept(
+                            message -> sender.sendMessage(message
                                     .replaceAll("%NAME%", cPlayer.getActualUsername())
                                     .replaceAll("%RANK%", cPlayer.getRank().getDisplayName())
+                            )
                     );
-                }, 30);
-            } else {
-                cPlayer.setRank(rank);
-                playerInfoService.savePlayer(cPlayer);
-                if (target != null) {
-                    AquaCore.getInstance().getPermissionSystem().updatePermissions(target);
                 }
-                sender.sendMessage(
-                        messageService.getMessage("rank.success", MessageService.MessageType.INFO)
-                                .replaceAll("%NAME%", cPlayer.getActualUsername())
-                                .replaceAll("%RANK%", cPlayer.getRank().getDisplayName())
-                );
             }
-        }
+        });
     }
 
     public List<String> onTabComplete(final CommandSender sender, final String[] args) {
@@ -128,8 +128,12 @@ public final class RankCommand extends CCommand {
             return super.onTabComplete(sender, args);
         }
         if (args.length == 2) {
-            return permissionService.getRanks().stream()
-                    .map(Rank::getName).filter(name -> name.startsWith(args[1])).collect(Collectors.toList());
+            try {
+                return permissionService.getRanks().get(5, TimeUnit.SECONDS).stream()
+                        .map(Rank::getName).filter(name -> name.startsWith(args[1])).collect(Collectors.toList());
+            } catch (final Exception e) {
+                e.printStackTrace();
+            }
         }
         return ImmutableList.of();
     }
