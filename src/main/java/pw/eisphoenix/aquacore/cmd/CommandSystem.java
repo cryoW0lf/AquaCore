@@ -13,9 +13,7 @@ import pw.eisphoenix.aquacore.misc.TPSCommand;
 import pw.eisphoenix.aquacore.permission.RankCommand;
 import pw.eisphoenix.aquacore.service.MessageService;
 import pw.eisphoenix.aquacore.totp.TOTPCommand;
-import pw.eisphoenix.aquacore.util.ReflectionUtil;
 
-import java.lang.reflect.Field;
 import java.util.function.Consumer;
 
 /**
@@ -31,18 +29,7 @@ public final class CommandSystem {
 
     public CommandSystem() {
         DependencyInjector.inject(this);
-        try {
-            final Class<?> craftServer = ReflectionUtil.getCBClass("CraftServer");
-            if (craftServer != null) {
-                final Field field = craftServer.getDeclaredField("commandMap");
-                if (field != null) {
-                    field.setAccessible(true);
-                    simpleCommandMap = (SimpleCommandMap) field.get(Bukkit.getServer());
-                }
-            }
-        } catch (final ReflectiveOperationException e) {
-            e.printStackTrace();
-        }
+        simpleCommandMap = (SimpleCommandMap) Bukkit.getCommandMap();
 
         registerCommand(totpCommand);
         registerCommand(new BanCommand());
